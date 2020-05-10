@@ -4,6 +4,7 @@ import android.content.pm.ActivityInfo;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
@@ -11,13 +12,43 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 public class MediaPlayerActivity extends AppCompatActivity {
     private SurfaceView surfaceView;
     private MediaPlayer player;
     private SurfaceHolder holder;
+    private SeekBar seekbar;
+    //private TextView textViewTime;
+    private TextView textviewcurrentposition;
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+
+    private Handler handler = new Handler();
+    private Runnable runnable = new Runnable() {
+        @RequiresApi(api = Build.VERSION_CODES.N)
+        public void run() {
+            if (player.isPlaying()) {
+                int current = player.getCurrentPosition();
+                seekbar.setProgress(current);
+                textviewcurrentposition.setText(time(player.getCurrentPosition()));
+            }
+            handler.postDelayed(runnable, 500);
+        }
+    };
+
+    private String time(long millionSeconds) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("mm:ss");
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(millionSeconds);
+        return simpleDateFormat.format(c.getTime());
+    }
+
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -27,6 +58,7 @@ public class MediaPlayerActivity extends AppCompatActivity {
 
         setContentView(R.layout.layout_media_player);
         surfaceView = findViewById(R.id.surfaceView);
+        textviewcurrentposition=findViewById(R.id.textView2);
         player = new MediaPlayer();
         try {
             player.setDataSource(getResources().openRawResourceFd(R.raw.bytedance));
@@ -57,10 +89,16 @@ public class MediaPlayerActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
+        seekbar=(SeekBar) findViewById(R.id.seekBar);
+
+        seekbar.setOnSeekBarChangeListener(onSeekBarChangeListener);
         findViewById(R.id.buttonPlay).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                handler.postDelayed(runnable, 0);
                 player.start();
+                seekbar.setMax(player.getDuration());
             }
         });
 
@@ -70,6 +108,8 @@ public class MediaPlayerActivity extends AppCompatActivity {
                 player.pause();
             }
         });
+
+
     }
 
     public void changeVideoSize(MediaPlayer mediaPlayer) {
@@ -103,8 +143,29 @@ public class MediaPlayerActivity extends AppCompatActivity {
         if (player != null) {
             player.stop();
             player.release();
+            player=null;
         }
     }
+
+    private SeekBar.OnSeekBarChangeListener onSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+            int progress = seekBar.getProgress();
+            if(player.isPlaying()){
+                player.seekTo(progress);
+            }
+        }
+    };
 
     private class PlayerCallBack implements SurfaceHolder.Callback {
         @Override
